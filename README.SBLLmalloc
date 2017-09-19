@@ -1,0 +1,71 @@
+SBLLmalloc: A Malloc Library to Reduce Memory Footprint of MPI Applications
+===========================================================================
+
+The SBLLmalloc code is inside the top level directory. Run make in the top
+level directory to compile the code.
+
+Top level directory contains modified version of ptmalloc v3 inside directory
+'ptmalloc3'. I have added internal-routines.h which lists the internal routines
+being called by malloc, free, realloc routines of ptmalloc3. In order to do
+that, I have converted the hooks (e.g.  void* public_mALLOc(size_t bytes)) as
+wrapper to actual routines.  The original code inside these public functions
+have been moved into internal routnines. These internal routines are used by
+SBLLmalloc for internal metadata (e.g. avl tree node) allocations.
+
+Please look inside doc directory for manual.pdf, and run the following command
+if you cannot find manual.pdf inside it.
+
+cd doc; make; cd latex; make; mv refman.pdf ../manual.pdf; cd ..; rm -rf latex; cd ..
+
+Files:
+---------
+
+.
+|--   AVL.cpp
+|--   AVL.h
+|--   Globals.h
+|--   Makefile
+|--   MicroTimer.cpp
+|--   MicroTimer.h
+|--   README.SBLLmalloc
+|--   SharedHeap.cpp
+|--   SharedHeap.h
+|--   doc
+|   |--   Makefile
+|   |--   README.tex
+|   |--   doc.conf
+|   `--   manual.pdf
+|--   lib
+|--   ptmalloc3
+|   |--   COPYRIGHT
+|   |--   ChangeLog
+|   |--   Makefile
+|   |--   Makefile.heaplayer
+|   |--   README
+|   |--   internal-routines.h
+|   |--   lran2.h
+|   |--   malloc-2.8.3.h
+|   |--   malloc-private.h
+|   |--   malloc.c
+|   |--   ptmalloc3.c
+|   |--   sysdeps
+|   |   |--   generic
+|   |   |   |--   atomic.h
+|   |   |   |--   malloc-machine.h
+|   |   |   `--   thread-st.h
+|   |   |--   pthread
+|   |   |   |--   malloc-machine.h
+|   |   |   `--   thread-st.h
+|   |   |--   solaris
+|   |   |   |--   malloc-machine.h
+|   |   |   `--   thread-st.h
+|   |   `--   sproc
+|   |       |--   malloc-machine.h
+|   |       `--   thread-st.h
+|   |--   t-test.h
+|   |--   t-test1.c
+|   |--   t-test2.c
+|   `--   tst-independent-alloc.c
+`--   run
+    |--   submitjob.mpirun.sh
+	`--   submitjob.srun.sh

@@ -1,0 +1,113 @@
+/*!
+
+@mainpage SBLLmalloc
+@author Susmit Biswas
+
+Memory size has long limited large-scale applications on high-performance 
+computing (HPC) systems. Increasing core counts per chip and power density 
+constraints, which limit the number of DIMMs per node, have exacerbated this 
+problem. Mechanisms to manage memory usage ---preferably transparently--- more 
+efficiently could increase effective DRAM capacity and, thus, the benefit 
+of multicore nodes for HPC systems.
+
+MPI application processes often exhibit significant data similarity. 
+These data regions occupy multiple physical locations within a multicore 
+node and thus offer a potential savings in memory capacity. These data, 
+primarily residing in heap, are quite dynamic, which makes them difficult 
+to manage statically.
+
+SBLLmalloc is a memory allocation library that
+automatically identifies the replicated memory blocks and merges them into
+a single copy. SBLLmalloc does not require application or OS changes since
+we implement it as a user-level library that can be linked at runtime.
+Overall, we find that SBLLmalloc reduces the memory
+footprint of a wide range of MPI applications by \f$37.03\%\f$ on average
+and up to \f$60.87\%\f$. Further, \SBLLmalloc supports problem sizes for 
+AMG and IRS over \f$18.5\%\f$ and \f$21.6\%\f$ larger than using standard memory 
+management techniques, thus significantly increasing effective system size.
+
+In the following, the usage of the library is described. In the \e run
+directory you will find a script called submitjob.sh.  Modify it to your need.
+Examples of using this script is shown at the end of this section.
+
+This file describes the usage of the heap merging library. In order to use
+merge capability, you need to set some environment variables which triggers
+merge operations. If the original commandline is 
+
+	srun -nx -Ny <commandline>, 
+	
+you will need to change it to the following command.
+
+\verbatim
+MPIRUN="srun -nx -Ny" TH=<threshold value> ENV_VAR1=<value1> \
+	[ENV_VAR2=<value2> ...] $TOPDIR/run/submitjob_v2.sh <commandline>
+\endverbatim
+
+At the end of the section you will find a concrete example.
+	
+If address space layout randomization (ASLR) is enabled, for x86_64 machines
+run the program with setarch x86_64 --3gb -R.  For i*86 based servers, use i386
+instead of x86_64. In most of the HPC clusters ASLR is disabled, so you may
+need to use \c setarch at all. Check the file \c
+/proc/sys/kernel/randomize_va_space to see if the value set 0 to disable ASLR.
+
+In order to set parameters in the library you need to set some environment
+variables which are listed in Table\latexonly \ref{tab:env-vars}\endlatexonly
+
+\latexonly
+\begin{table}[!tb]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline \hline
+\textbf{Name} & \textbf{Default} & \textbf{Description} \\ \hline
+PROFILE\_MODE & 1 & profiling mode? \\
+& & 0: no profiling \\
+& & 1: create profiles \\
+& & 2: use profile for merging (EXPERIMENTAL) \\ \hline
+MERGE\_METRIC & 1 & merge metric? \\
+& & 0: disabled \\
+& & 1: alloc\_frequency \\
+& & 2: threshold (Recommended)\\
+& & 3: buffered (Experimental)\\ \hline
+MALLOC\_MERGE\_FREQ & 1000 & frequency for frequency based merge \\ \hline
+MIN\_MEM\_TH & 10 & threshold for threshold based merge \\ \hline
+ENABLE\_BACKTRACE & 0 & enable backtrace?\\
+& & 1: enabled\\
+& & 0: disabled\\
+& & Used for finding the source location that\\
+& & allocated the merged page \\  \hline
+SEM\_KEY & 1234 & semaphore key \\ \hline
+NOT\_MPI\_APP & 0 & define 1 if this does not call MPI\_Init(). \\
+& & You need to modify the code. Please read the TODO list.\\ \hline
+\end{tabular}
+\label{tab:env-vars}
+\caption{Environment Variables}
+\end{table}
+\endlatexonly
+
+Example use:
+\verbatim
+bash$ cat run.amg.sh
+#!/bin/bash
+COMMANDLINE="./amg2006 -P 2 2 2 -n 80 80 80 -r 20 20 20 -27pt"
+MPIRUN="srun -n8 -N1" TH=200 MERGE_METHOD=2 ENABLE_BACKTRACE=0 PROF=0 \ 
+	~/LLNL_WORK/ptmalloc/run/submitjob_v2.sh $COMMANDLINE
+bash$ ./run.amg.sh
+salloc: Granted job allocation 1006112
+  Laplace type problem with a 27-point stencil 
+  (nx_global, ny_global, nz_global) = (160, 160, 160)
+  (Px, Py, Pz) = (2, 2, 2)
+   ...
+\endverbatim
+
+If you get a fault due to mmap cap, issue the following command to change the
+default max map count to 512K. In default system configuration it is set as
+64K. Check the value with  the following command.
+
+\em sysctl \em vm.max_map_count
+
+To change the limit please issue the following command.
+
+\c sudo \c sysctl \c vm.max_map_count=$((512*1024))
+
+*/	

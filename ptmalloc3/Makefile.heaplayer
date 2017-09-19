@@ -1,0 +1,54 @@
+targets=libptmalloc.so
+all: $(targets)
+
+
+RM 	=rm -f
+CC	=mpicc
+CXX	=mpiCC
+TAR =tar -zcvf
+MOVE=mv
+
+# for debugging purpose or backtracing, remove fomit-frame-pointer
+CXXFLAGS=-rdynamic -g -Wall -pipe -O3
+#CXXFLAGS=-rdynamic -g -Wall -pipe -O3 -finline-limit=65000 -fkeep-inline-functions -finline-functions -ffast-math -fomit-frame-pointer 
+CPPFLAGS=-I. -D_REENTRANT=1 -D__GNU_SOURCE=1 -fPIC -shared
+
+ORIG_OBJS=libptmalloc.o ptmalloc3.o malloc.o
+SRC=libptmalloc.cpp ptmalloc3.c malloc.c
+
+CPPFLAGS=-D_GNU_SOURCE=1 -fPIC -DUSE_TSD_DATA_HACK -Isysdeps/pthread -Isysdeps/generic -I. -DTHREAD_STATS=1 -Wstrict-prototypes 
+CXXFLAGS= -g -O2  -Wall
+
+ptmalloc3.o:ptmalloc3.c
+	$(CC) $(CPPFLAGS) $(CXXFLAGS) -DMSPACES=1 -c $< -o $@
+
+malloc.o: malloc.c
+	$(CC) $(CPPFLAGS) $(CXXFLAGS) -DONLY_MSPACES -DUSE_LOCKS=0 -DMSPACES=1 -c $< -o $@
+
+libptmalloc.so: ptmalloc3.o malloc.o
+	g++ -shared $(CPPFLAGS) $(CXXFLAGS) ptmalloc3.o malloc.o -o libptmalloc.so
+
+
+%.o:%.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+%.o:%.c
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+
+
+clean:
+	$(RM) $(SHM_PT_OBJS) $(ORIG_OBJS) $(targets)
+
+archive:
+	$(TAR) src.tar.gz .
+	$(MOVE) src.tar.gz src.`date +%m%d%Y-%H%M%S`.tar.gz
+
+update:
+	svn update
+
+commit:
+	svn ci -m ""
+
+
+#depend:
+#	@makedepend -- $(CPPFLAGS) -- $(SRC)
